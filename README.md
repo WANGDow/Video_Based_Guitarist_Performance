@@ -6,9 +6,9 @@ This project aims to classify the performance of a guitarist according to his/he
 
 # Library Involved:
 
-# OpenCV
+OpenCV
 1. Frame-by-frame video processing
 2. Hand keypoints detection using pretrained Caffa model
 
-# PyTorch
+PyTorch
 1. Deep learning framework for the training of perfermance classifier
