@@ -97,9 +97,9 @@ class Evaluation():
         if result[0] > result[1] and result[0] > result[2]:
             return "New", (result[0] / len(predictions))
         elif result[1] > result[0] and result[1] > result[2]:
-            return "Fluent", (result[0] / len(predictions))
+            return "Fluent", (result[1] / len(predictions))
         else:
-            return "Skilled", (result[0] / len(predictions))
+            return "Skilled", (result[2] / len(predictions))
 
 #For testing purposes only
 if __name__ == "__main__":
