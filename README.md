@@ -4,7 +4,7 @@ Currently, it is an unfinished project. More files and examples will be uploaded
 
 This project aims to classify the performance of a guitarist according to his/her finger gesture in 2D. Now, the model is able to achieve around 70% accuracy.
 
-#Testing
+# Testing
 
 1. Make sure your the version of your libraries are the same (IMPORTANT!!!)
 2. Modify the evaluation.py by commenting the video processing part and using the txt as input to generate the csv file directly. Since the video and detection models are not uploaded
