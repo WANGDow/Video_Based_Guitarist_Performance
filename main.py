@@ -22,7 +22,7 @@ if __name__ == "__main__":
     WEIGHTS_FILE_PATH = "caffe_model/pose_iter_102000.caffemodel"
     evaluation = e.Evaluation(VIDEO_PATH, MODEL_PATH, PROTO_FILE_PATH, WEIGHTS_FILE_PATH)
     
-    input_folder = "train_1"
+    input_folder = "test_samples"
     log_file_mask = input_folder + "\*.txt"
     log_file_names = glob(log_file_mask)
 
