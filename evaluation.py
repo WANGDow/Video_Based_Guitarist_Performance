@@ -52,10 +52,10 @@ class Evaluation():
         
         #extraction = CoorExtraction(self._proto_file_path, self._weights_file_path, self._video_path, self._threshold)
         #log_file = extraction._run_extraction()
-        #log_file = "cases/s_10_1_new_3.txt"
-        #csv_file = dpCSV_Generation(log_file)
-        csv_file = "cases/s_10_1_new_3.csv"
-        #csv_file = csv_generation._start_csv()
+        log_file = "cases/s_10_1_new_3.txt"
+        csv_generation = dp.CSV_Generation(log_file)
+        #csv_file = "cases/s_10_1_new_3.csv"
+        csv_file = csv_generation._start_csv()
         input = self._data_loader(csv_file)
         print(self._eval_result(input))
         print("Total time taken for evaluation: {:.3f}".format((time.time() - t) / 60) + " MINUTES")
