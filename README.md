@@ -7,8 +7,8 @@ This project aims to classify the performance of a guitarist according to his/he
 # Testing
 
 1. Make sure the version of your libraries are exactly the same. (IMPORTANT!!!)
-2. The train_1.zip contains 100 test cases. Simply unzip it to the folder. 
-3. Run main.py for testing purposes. It takes use the txt files (in the train_1.zip) as the input to generate the csv files directly, since the video and hand gesture detection models are not uploaded. (The txt files are generated coor_extraction.py from videos. Examples will be uploaded later on.)
+2. The test_samples.zip contains 100 test cases. Simply unzip it to the folder. 
+3. Run main.py for testing purposes. It takes use the txt files (in the test_samples.zip) as the input to generate the csv files directly, since the video and hand gesture detection models are not uploaded. (The txt files are generated coor_extraction.py from videos. Examples will be uploaded later on.)
 4. Modified the evaluation.py for custom input and settings (Optional).
 
 # Library Involved:
