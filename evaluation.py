@@ -43,7 +43,7 @@ class Evaluation():
         self._weights_file_path = weights_file_path
         self._threshold = threshold
 
-    def _start_evaluation(self):
+    def _start_evaluation(self, log_file):
         '''
         Initiate the evaluation procedure
         '''
@@ -52,13 +52,16 @@ class Evaluation():
         
         #extraction = CoorExtraction(self._proto_file_path, self._weights_file_path, self._video_path, self._threshold)
         #log_file = extraction._run_extraction()
-        log_file = "cases/s_10_1_new_3.txt"
+        #log_file = "cases/s_9_9_new_1.txt"
         csv_generation = dp.CSV_Generation(log_file)
         #csv_file = "cases/s_10_1_new_3.csv"
         csv_file = csv_generation._start_csv()
         input = self._data_loader(csv_file)
-        print(self._eval_result(input))
+        prof, conf = self._eval_result(input)
+        print("Proficency: " + prof)
+        print("Confidence: {}".format(conf))
         print("Total time taken for evaluation: {:.3f}".format((time.time() - t) / 60) + " MINUTES")
+        return prof, conf
 
     def _data_loader(self, csv_path):
         '''
@@ -102,7 +105,9 @@ class Evaluation():
             return "Skilled", (result[2] / len(predictions))
 
 #For testing purposes only
+'''
 if __name__ == "__main__":
     evaluation = Evaluation(VIDEO_PATH, MODEL_PATH, PROTO_FILE_PATH, WEIGHTS_FILE_PATH)
     evaluation._start_evaluation()
     print("Finish")
+'''
