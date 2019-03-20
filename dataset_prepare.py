@@ -38,7 +38,7 @@ class CSV_Generation():
         Return the csv path
         '''
         t = time.time()
-        print("CSV Generation has been initialized")
+        #print("CSV Generation has been initialized")
         with open(self._output_file, "w", newline="") as dataset_file:
             dataset_writer = csv.writer(dataset_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             file = open(self._log_file, "r")
@@ -88,7 +88,7 @@ class CSV_Generation():
                     if count == 21:
                         new_row = True
         
-        print("Total time taken for csv generation: {:.3f}".format((time.time() - t) / 60) + " MINUTES")
+        #print("Total time taken for csv generation: {:.3f}".format((time.time() - t) / 60) + " MINUTES")
         return self._output_file
 
     def _get_cors_from_line(self,line):
