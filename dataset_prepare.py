@@ -1,284 +1,204 @@
+'''
+Author: WANG Zichen
+
+The CSV_Generation class produces a csv file, which will
+be fed to the classification model, based on the coordinate 
+extracted from the video. 
+By default, the
+
+The Point class provide a data structure to store 2D value.
+'''
 import csv
-from glob import glob
 import numpy as np
 import math
+import time
 
-JOINT_ANGLE = [[1,2,3],[2,3,4],[5,6,7],[6,7,8],[9,10,11],[10,11,12],[13,14,15],[14,15,16],[17,18,19],[18,19,20]]
+#For testing purposse only
+#INPUT_FORLDER = "cases\s_10_1_new_3.txt"
+
 POINT_PAIRS = [[6,7],[7,8],[10,11],[11,12],[14,15],[15,16],[18,19],[19,20]]
 THUMB_TIP = 4
 
-def get_angle_from_coor(coor_buf):
-    angle_list = []
-    for angle_index in JOINT_ANGLE:
-        key_b = coor_buf[angle_index[0]]
-        key_a = coor_buf[angle_index[1]]
-        key_c = coor_buf[angle_index[2]]
-        if key_a._is_zero() or key_b._is_zero() or key_c._is_zero():
-            angle_list.append(0)
-            continue
+class CSV_Generation():
+    '''
+    The CSV_Generation class produces a csv file, which will
+    be fed to the classification model, based on the coordinate 
+    extracted from the video.
+
+    Parameter:
+        log_file (str): the path of the log file to be processed
+    '''
+    def __init__(self, log_file):
+        self._log_file = log_file
+        self._output_file = log_file.replace(".txt", ".csv")
+
+    def _start_csv(self):
+        '''
+        Initiate the evaluation procedure.
+        Return the csv path
+        '''
+        t = time.time()
+        print("CSV Generation has been initialized")
+        with open(self._output_file, "w", newline="") as dataset_file:
+            dataset_writer = csv.writer(dataset_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            file = open(self._log_file, "r")
+            new_row = True
+            coor_buf = []
+            result_line = []
+            start_record = False
+            count = 0
+            for line in file:
+                if new_row:
+                    if count == 21:
+                        thumb = coor_buf[THUMB_TIP]
+                        if not thumb._is_zero():
+                            result_line.append(1)
+                        else:
+                            result_line.append(0)
+
+                        distance_list = self._get_distance_from_coor_tips(coor_buf)
+                        zero_count = 0
+                
+                        for distance in distance_list:
+                            result_line.append(distance)
+                            if distance == 0:
+                                zero_count += 1
+
+                        if zero_count <= 2:                
+                            dataset_writer.writerow(result_line)
+                        result_line = []
+                        coor_buf = []
+                        count = 0
+                        new_row = False
+
+                if str(line).find("Frame") >= 0:
+                    dump1, dump2, frame_no = str(line).split(" ")
+                    d_name = self._log_file + "_" +str(frame_no)
+                    chord = self._get_chord_from_frame_no(int(frame_no))
+                    result_line.append(chord)
+                    start_record = True
+                    continue
+
+                if str(line).find("[") >= 0:
+                    count += 1
+                    dump1, cor_line = str(line).split(" ", 1)
+                    x_cor, y_cor = self._get_cors_from_line(cor_line)
+                    point = Point(x_cor, y_cor)
+                    coor_buf.append(point)
+                    if count == 21:
+                        new_row = True
         
-        len_ac = math.sqrt((key_a._get_x() - key_c._get_x()) * (key_a._get_x() - key_c._get_x()) + (key_a._get_y() - key_c._get_y()) * (key_a._get_y() - key_c._get_y())) 
-        len_ab = math.sqrt((key_a._get_x() - key_b._get_x()) * (key_a._get_x() - key_b._get_x()) + (key_a._get_y() - key_b._get_y()) * (key_a._get_y() - key_b._get_y())) 
-        angle = math.acos(np.dot([key_a._get_x() - key_c._get_x(),key_a._get_y() - key_c._get_y()],[key_a._get_x() - key_b._get_x(),key_a._get_y() - key_b._get_y()]) / (len_ac * len_ab))
-        angle_list.append(angle)
-        print(angle)
-    return angle_list
+        print("Total time taken for csv generation: {:.3f}".format((time.time() - t) / 60) + " MINUTES")
+        return self._output_file
 
-def get_distance_from_coor_tips(coor_buf):
-    distance_list = []
-    
-    for point_pair in POINT_PAIRS:
-        key_a = coor_buf[point_pair[0]]
-        key_b = coor_buf[point_pair[1]]
-        if key_a._is_zero() or key_b._is_zero():
-            distance_list.append(0)
-            continue
-        len_ab = float(math.sqrt((key_a._get_x() - key_b._get_x()) * (key_a._get_x() - key_b._get_x()) + (key_a._get_y() - key_b._get_y()) * (key_a._get_y() - key_b._get_y())))
-        distance_list.append(len_ab)
+    def _get_cors_from_line(self,line):
+        '''
+        Return coordinates from the input lines
 
-    return distance_list
-
-def get_level(level_code):
-    if level_code == "2" or level_code == "11" or level_code == "15":
-        return 0 #"New"
-    elif level_code == "4" or level_code == "7" or level_code == "9" or level_code == "10" or level_code == "14":
-        return 1 #"Fluent"
-    else: # level_code == "3" or level_code == "5" or level_code == "4"
-        return 2 #"Skilled"
-
-def get_level_with_name(level_code):
-    if level_code == "2" or level_code == "11" or level_code == "15":
-        return 0, "New" #"New"
-    elif level_code == "4" or level_code == "7" or level_code == "9" or level_code == "10" or level_code == "14":
-        return 1, "Fluent" #"Fluent"
-    else: # level_code == "3" or level_code == "5" or level_code == "4"
-        return 2, "Skilled" #"Skilled"
-
-def get_cors_from_line(line):
-    x_cor = "0"
-    y_cor = "0"
-    #print(line)
-    if line == "[]\n": #No values are found
+        Parameter:
+            line (str): the line in the txt file
+        '''
         x_cor = "0"
         y_cor = "0"
-    else: #Values are found
-        first_half = line.split(",")[0]
-        second_half = line.split(",")[1]
-        #print(second_falf)
-       
-        
-        first_half = str(first_half).replace("(", "")
-        second_half = str(second_half).replace(")", "")
-        first_half = str(first_half).replace("[", "")
-        second_half = str(second_half).replace("]", "")
-        #line = str(line).replace(",", "")
-        second_half = str(second_half).replace("\n", "")
-        x_cor = first_half
-        y_cor = second_half
+        if line == "[]\n": #No values are found
+            x_cor = "0"
+            y_cor = "0"
+        else: #Values are found
+            first_half = line.split(",")[0]
+            second_half = line.split(",")[1]
+            first_half = str(first_half).replace("(", "")
+            second_half = str(second_half).replace(")", "")
+            first_half = str(first_half).replace("[", "")
+            second_half = str(second_half).replace("]", "")
+            second_half = str(second_half).replace("\n", "")
+            x_cor = first_half
+            y_cor = second_half
 
-        
-        #print(line)
-    #print(x_cor + " " + y_cor)
-    return int(x_cor), int(y_cor)
+        return int(x_cor), int(y_cor)
 
-def get_chord_from_frame_no(frame_no):
-    if int(frame_no / 40) == 0 or int(frame_no / 40) == 5:
-        return 0 #C
-    elif int(frame_no / 40) == 1:
-        return 1 #G
-    elif int(frame_no / 40) == 2:
-        return 2 #Am
-    elif int(frame_no / 40) == 3:
-        return 3 #Em
-    elif int(frame_no / 40) == 4:
-        return 4 #F
-    elif int(frame_no / 40) == 6:
-        return 5 #Dm7
-    else:
-        return 6 #Gsus4
+    def _get_chord_from_frame_no(self, frame_no):
+        '''
+        Return the chord name according to the frame number with chord
+        sequence C G Am Em C Dm7 Gsus4. Each chord lasts for 60 frames.
+        
+        Parameter:
+            frame_no (int): the number of the frame
+        '''
+        if int(frame_no / 60) == 0 or int(frame_no / 40) == 5:
+            return 0 #C
+        elif int(frame_no / 60) == 1:
+            return 1 #G
+        elif int(frame_no / 60) == 2:
+            return 2 #Am
+        elif int(frame_no / 60) == 3:
+            return 3 #Em
+        elif int(frame_no / 60) == 4:
+            return 4 #F
+        elif int(frame_no / 60) == 6:
+            return 5 #Dm7
+        else:
+            return 6 #Gsus4
+
+    def _get_distance_from_coor_tips(self, coor_buf):
+        '''
+        Calculate the distance between two points, which will return 0 if
+        the input point contains 0.
+        
+        Parameter:
+            coor_buf (Point[]): a list of Points
+        '''
+        distance_list = []
+    
+        for point_pair in POINT_PAIRS:
+            key_a = coor_buf[point_pair[0]]
+            key_b = coor_buf[point_pair[1]]
+            if key_a._is_zero() or key_b._is_zero():
+                distance_list.append(0)
+                continue
+            len_ab = float(math.sqrt((key_a._get_x() - key_b._get_x()) * (key_a._get_x() - key_b._get_x()) + (key_a._get_y() - key_b._get_y()) * (key_a._get_y() - key_b._get_y())))
+            distance_list.append(len_ab)
+
+        return distance_list
 
 class Point():
+    '''
+    The Point class provide a data structure to store 2D value.
+
+    Parameter:
+        x_coor (int): x coordinate of the Point
+        y_coor (int): y coordinate of the Point
+    '''
     def __init__(self, x_coor, y_coor):
         self.x_coor = x_coor
         self.y_coor = y_coor
     
     def _get_x(self):
+        '''
+        Return the x coordinate
+        '''
         return self.x_coor
 
     def _get_y(self):
+        '''
+        Return the y coordinate
+        '''
         return self.y_coor
 
     def _is_zero(self):
+        '''
+        Return if the point contains 0
+        '''
         return self.x_coor == 0 or self.y_coor == 0
 
+    #Print the point
     def __str__(self):
         return str(self.x_coor) + " " + str(self.y_coor)
     def __repr__(self):
         return str(self.x_coor) + " " + str(self.y_coor)
 
-
-with open("dataset_distance_nomarker_name.csv", "w", newline="") as dataset_file:
-    dataset_writer = csv.writer(dataset_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-    #impliment the first row
-    #dataset_writer.writerow(["sequence", "level", "chord", "thumb_angle_0", "thumb_angle_1", "index_angle_0", "index_angle_1","middle_angle_0", "middle_angle_1","ring_angle_0", "ring_angle_1","pinky_angle_0", "pinky_angle_1"])
-    #dataset_writer.writerow(["sequence", "level", "chord", "thumb_tip_x", "thumb_tip_y", "index_distance_0", "index_distance_1","middle_distance_0", "middle_distance_1","ring_distance_0", "ring_distance_1","pinky_distance_0", "pinky_distance_1"])
-    
-    input_folder = "output/test"
-   
-
-    log_file_mask = input_folder + "\*.txt"
-    log_file_names = glob(log_file_mask)
-
-    for file_name in log_file_names:
-        t_file_name = str(file_name).replace(input_folder, "")
-        t_file_name = str(t_file_name).replace(".txt", "")
-        dump1, level_code, dump3, dump4, interval = t_file_name.split("_")
-        #if interval != "3":
-         #   continue    
-
-        #file_name = "0.5_thresh\s_2_1_new_3.txt"
-
-       # print(t_file_name)
-
-        #t_file_name = str(file_name).replace("0.5_thresh", "")
-        #t_file_name = str(t_file_name).replace(".txt", "")
-        #dump1, level_code, dump3, dump4, interval = t_file_name.split("_")
-        
-        print(file_name)
-        #print(level_code)
-
-        file = open(file_name, "r")
-        new_row = True
-        coor_buf = []
-        result_line = []
-        #level_code = "2"
-        start_record = False
-        count = 0
-        for line in file:
-            if new_row:
-                if count == 21:
-                    #angle_list = get_angle_from_coor(coor_buf)
-                    thumb = coor_buf[THUMB_TIP]
-                    if not thumb._is_zero():
-                        #result_line.append(thumb._get_x())
-                        #result_line.append(thumb._get_y())
-                        result_line.append(1)
-                    else:
-                        #result_line.append(0)
-                        #result_line.append(0)
-                        result_line.append(0)
-
-                    distance_list = get_distance_from_coor_tips(coor_buf)
-                    zero_count = 0
-                
-                    for distance in distance_list:
-                        result_line.append(distance)
-                        if distance == 0:
-                            zero_count += 1
-
-                    if zero_count <= 2:                
-                        dataset_writer.writerow(result_line)
-                #print(coor_buf)
-                    result_line = []
-                    coor_buf = []
-                    count = 0
-                    new_row = False
-
-            if str(line).find("Frame") >= 0:
-                dump1, dump2, frame_no = str(line).split(" ")
-                #print(frame_no.replace("\n", ""))
-                d_name = file_name + "_" +str(frame_no)
-                #result_line.append(d_name)
-                level= get_level(level_code)
-                #level, name = get_level_with_name(level_code)
-                #result_line.append(name)
-                result_line.append(level)
-                chord = get_chord_from_frame_no(int(frame_no))
-                result_line.append(chord)
-            #print(result_line)
-                start_record = True
-                continue
-
-            if str(line).find("[") >= 0:
-                #print(line)
-                count += 1
-                dump1, cor_line = str(line).split(" ", 1)
-                x_cor, y_cor = get_cors_from_line(cor_line)
-                point = Point(x_cor, y_cor)
-                coor_buf.append(point)
-            #result_line.append(x_cor)
-            #result_line.append(y_cor)
-           # print(result_line)
-            #print(cor_line)
-                if count == 21:
-                    new_row = True
-
-
+#For testing purposes only
 '''
-with open("dataset.csv", "w", newline="") as dataset_file:
-  #  spamwriter = csv.writer(csvfile, delimiter=' ',
-  #                          quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    dataset_writer = csv.writer(dataset_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-    #impliment the first row
-    dataset_writer.writerow(["sequence", "level", "chord", "k0_x", "k0_y", "k1_x", "k1_y", "k2_x", "k2_y", "k3_x", "k3_y", "k4_x", "k4_y", "k5_x", "k5_y", "k6_x", "k6_y", "k7_x", "k7_y", "k8_x", "k8_y", "k9_x", "k9_y", "k10_x", "k10_y", "k11_x", "k11_y", "k12_x", "k12_y", "k13_x", "k13_y", "k14_x", "k14_y", "k15_x", "k15_y", "k16_x", "k16_y", "k17_x", "k17_y", "k18_x", "k18_y", "k19_x", "k19_y", "k20_x", "k20_y"])
-    
-    input_folder = "output_0.5"
-   
-
-    log_file_mask = input_folder + "\*.txt"
-    log_file_names = glob(log_file_mask)
-   
-    for file_name in log_file_names:
-        t_file_name = str(file_name).replace(input_folder, "")
-        t_file_name = str(t_file_name).replace(".txt", "")
-        dump1, level_code, dump3, dump4, interval = t_file_name.split("_")
-        if interval != "3":
-            continue    
-
-        print(file_name)
-        #print(level_code)
-
-        file = open(file_name, "r")
-        new_row = True
-        result_line = []
-        #level_code = "2"
-        start_record = False
-        count = 0
-
-        for line in file:
-            if new_row:
-                if count == 21:
-                    dataset_writer.writerow(result_line)
-                    #print("record")
-                result_line = []
-                count = 0
-                new_row = False
-
-            if str(line).find("Frame") >= 0:
-                dump1, dump2, frame_no = str(line).split(" ")
-                #print(frame_no.replace("\n", ""))
-                d_name = file_name + "_" +str(frame_no)
-                result_line.append(d_name)
-                level = get_level(level_code)
-                result_line.append(level)
-                chord = get_chord_from_frame_no(int(frame_no))
-                result_line.append(chord)
-                #print(result_line)
-                start_record = True
-                continue
-
-            if str(line).find("[") >= 0:
-                #print(line)
-                count += 1
-                dump1, cor_line = str(line).split(" ", 1)
-                x_cor, y_cor = get_cors_from_line(cor_line)
-                result_line.append(x_cor)
-                result_line.append(y_cor)
-           # print(result_line)
-            #print(cor_line)
-                if count == 21:
-                    new_row = True
-       # print(result_line)
-   '''
+if __name__ == "__main__":
+    csv_generation = CSV_Generation(INPUT_FILE)
+    csv_generation._start_csv()
+'''
